@@ -1,0 +1,14 @@
+# Define exported variables
+set(ICU_INCLUDE_DIRS "@CMAKE_INSTALL_INCLUDEDIR@")
+set(ICU_LIBRARIES "@CMAKE_INSTALL_LIBDIR@")
+
+# Check if exported variables are empty
+if(NOT ICU_INCLUDE_DIRS OR NOT ICU_LIBRARIES)
+  message(FATAL_ERROR "ICU library configuration is incomplete. ICU_INCLUDE_DIRS and ICU_LIBRARIES must be set.")
+endif()
+
+# Export variables
+set(ICU_FOUND TRUE)
+set(ICU_VERSION "@PROJECT_VERSION@")
+
+include("${CMAKE_CURRENT_LIST_DIR}/ICUTargets.cmake")
