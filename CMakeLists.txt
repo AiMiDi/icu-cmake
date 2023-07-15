@@ -3,13 +3,19 @@
 
 cmake_minimum_required (VERSION 3.8)
 
-project (icu-cmake VERSION 1.0.0)
+project (icu-cmake VERSION 1.0.1)
 
 if (POLICY CMP0135)
     # policy CMP0135 will use OLD behavior for consistency
     cmake_policy(SET CMP0135 OLD)
 endif()
 
+# Set the compiler to support utf8
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -finput-charset=UTF-8")
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+  add_compile_options(/utf-8)
+endif()
 
 # ----- Setting -----
 
@@ -132,16 +138,10 @@ else()
 endif()  
 
 if(ICU_BUILD_UC)
-	if(MSVC)
-		target_compile_options(uc PRIVATE "/utf-8")
-	endif()
 	target_compile_definitions(uc PRIVATE U_COMMON_IMPLEMENTATION)
 	target_include_directories(uc PRIVATE "${ICU_PATH}/icu4c/source/common")
 endif()
 if(ICU_BUILD_I18N)
-	if(MSVC)
-		target_compile_options(i18n PRIVATE "/utf-8")
-	endif()
 	target_compile_definitions(i18n PRIVATE U_I18N_IMPLEMENTATION)
 	target_include_directories(i18n PRIVATE "${ICU_PATH}/icu4c/source/i18n")
 	target_include_directories(i18n PRIVATE "${ICU_PATH}/icu4c/source/common")
@@ -149,9 +149,6 @@ if(ICU_BUILD_I18N)
 	target_link_libraries(i18n uc)
 endif()
 if(ICU_BUILD_IO)
-	if(MSVC)
-		target_compile_options(io PRIVATE "/utf-8")
-	endif()
 	target_compile_definitions(io PRIVATE U_IO_IMPLEMENTATION)
 	target_include_directories(io PRIVATE "${ICU_PATH}/icu4c/source/io")
 	target_include_directories(io PRIVATE "${ICU_PATH}/icu4c/source/common")
