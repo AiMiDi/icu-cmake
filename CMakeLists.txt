@@ -3,7 +3,7 @@
 
 cmake_minimum_required (VERSION 3.8)
 
-project (icu-cmake VERSION 1.0.1)
+project (icu-cmake VERSION 1.0.2)
 
 if (POLICY CMP0135)
     # policy CMP0135 will use OLD behavior for consistency
@@ -11,7 +11,9 @@ if (POLICY CMP0135)
 endif()
 
 # Set the compiler to support utf8
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+if (CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -finput-charset -Xclang UTF-8")
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -finput-charset=UTF-8")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   add_compile_options(/utf-8)
