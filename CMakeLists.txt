@@ -3,12 +3,14 @@
 
 cmake_minimum_required (VERSION 3.8)
 
-project (icu-cmake VERSION 1.0.2)
+project (icu-cmake VERSION 1.0.3)
 
 if (POLICY CMP0135)
     # policy CMP0135 will use OLD behavior for consistency
     cmake_policy(SET CMP0135 OLD)
 endif()
+
+set(CMAKE_CXX_STANDARD 17)
 
 # Set the compiler to support utf8
 if (CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
