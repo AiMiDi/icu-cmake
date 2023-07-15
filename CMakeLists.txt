@@ -12,9 +12,9 @@ endif()
 
 # Set the compiler to support utf8
 if (CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -finput-charset -Xclang UTF-8")
+  add_compile_options(-finput-charset=UTF-8)
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -finput-charset=UTF-8")
+  add_compile_options(-finput-charset=UTF-8)
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   add_compile_options(/utf-8)
 endif()
