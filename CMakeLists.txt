@@ -3,7 +3,7 @@
 
 cmake_minimum_required (VERSION 3.8)
 
-project (icu-cmake VERSION 1.0.4)
+project (icu-cmake VERSION 1.0.5)
 
 if (POLICY CMP0135)
   # policy CMP0135 will use OLD behavior for consistency
@@ -244,55 +244,44 @@ endif()
 # ----- Set include dir -----
 
 if(ICU_BUILD_UC)
-  if(ICU_NO_INSTALL)
-	set(ICU_UC_INCLUDEDIR "${ICU_PATH}/icu4c/source/common/unicode" PARENT_SCOPE)
-  else()
-    # Search for .h files in the directory
-    file(GLOB HEADER_FILES "${ICU_PATH}/icu4c/source/common/unicode/*.h")
-    
-    # Iterate over each .h file and copy to the installation directory
-    foreach(header ${HEADER_FILES})
-      
-      # Copy file to CMAKE_CURRENT_BINARY_DIR
-	  file(COPY ${header} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/include/unicode" PARENT_SCOPE)
-    endforeach()
-    set(ICU_UC_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/icu/unicode")
-    set_target_properties(uc PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${ICU_UC_INCLUDEDIR})
-  endif()
+  # Search for .h files in the directory
+  file(GLOB HEADER_FILES "${ICU_PATH}/icu4c/source/common/unicode/*.h")
+   
+  # Iterate over each .h file and copy to the installation directory
+  foreach(header ${HEADER_FILES})
+     
+    # Copy file to CMAKE_CURRENT_BINARY_DIR
+    file(COPY ${header} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/include/unicode")
+  endforeach()
 endif()
 if(ICU_BUILD_I18N)
-  if(ICU_NO_INSTALL)
-	set(ICU_I18N_INCLUDEDIR "${ICU_PATH}/icu4c/source/i18n/unicode" PARENT_SCOPE)
-  else()
-    # Search for .h files in the directory
-    file(GLOB HEADER_FILES "${ICU_PATH}/icu4c/source/i18n/unicode/*.h")
+  # Search for .h files in the directory
+  file(GLOB HEADER_FILES "${ICU_PATH}/icu4c/source/i18n/unicode/*.h")
+  
+  # Iterate over each .h file and copy to the installation directory
+  foreach(header ${HEADER_FILES})
     
-    # Iterate over each .h file and copy to the installation directory
-    foreach(header ${HEADER_FILES})
-      
-      # Copy file to CMAKE_CURRENT_BINARY_DIR
-      file(COPY ${header} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/include/unicode")
-    endforeach()
-    set(ICU_I18N_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/icu/unicode" PARENT_SCOPE)
-    set_target_properties(i18n PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${ICU_I18N_INCLUDEDIR})
-  endif()
+    # Copy file to CMAKE_CURRENT_BINARY_DIR
+    file(COPY ${header} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/include/unicode")
+  endforeach()
 endif()
 if(ICU_BUILD_IO)
-  if(ICU_NO_INSTALL)
-	set(ICU_IO_INCLUDEDIR "${ICU_PATH}/icu4c/source/io/unicode" PARENT_SCOPE)
-  else()
-    # Search for .h files in the directory
-    file(GLOB HEADER_FILES "${ICU_PATH}/icu4c/source/io/unicode/*.h")
+  # Search for .h files in the directory
+  file(GLOB HEADER_FILES "${ICU_PATH}/icu4c/source/io/unicode/*.h")
+  
+  # Iterate over each .h file and copy to the installation directory
+  foreach(header ${HEADER_FILES})
+  
+    # Copy file to CMAKE_CURRENT_BINARY_DIR
+    file(COPY ${header} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/include/unicode")
+  endforeach()
+endif()
 
-    # Iterate over each .h file and copy to the installation directory
-    foreach(header ${HEADER_FILES})
-
-      # Copy file to CMAKE_CURRENT_BINARY_DIR
-      file(COPY ${header} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/include/unicode")
-    endforeach()
-    set(ICU_IO_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/icu/unicode" PARENT_SCOPE)
-    set_target_properties(io PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${ICU_IO_INCLUDEDIR})
-  endif()
+if(ICU_NO_INSTALL)
+  set(ICU_INCLUDEDIR "${CMAKE_CURRENT_BINARY_DIR}/include" PARENT_SCOPE)
+else()
+  set(ICU_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/icu")
+  set_target_properties(uc PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${ICU_UC_INCLUDEDIR})
 endif()
 
 
