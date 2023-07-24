@@ -1,14 +1,36 @@
 # © 2023 and later: Aimdi.
 # License & terms of use: https://github.com/AiMiDi/icu-cmake
 
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.10...3.21)
 
-project (icu-cmake VERSION 1.0.5)
+# ----- Start icu project ----- 
 
 if (POLICY CMP0135)
   # policy CMP0135 will use OLD behavior for consistency
   cmake_policy(SET CMP0135 OLD)
 endif()
+
+if(NOT ICU_PATH)
+	set(ICU_PATH "${CMAKE_CURRENT_SOURCE_DIR}/icu")
+endif()
+
+include(cmake/utils.cmake)
+
+icu_extract_version()
+
+project (icu-cmake VERSION ${ICU_VERSION} LANGUAGES CXX)
+message(STATUS "Build icu: ${ICU_VERSION}")
+
+# Check if icu is being used directly or via add_subdirectory, but allow overriding
+if(NOT DEFINED ICU_MASTER_PROJECT)
+    if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+        set(ICU_MASTER_PROJECT ON)
+    else()
+        set(ICU_MASTER_PROJECT OFF)
+    endif()
+endif()
+
+# ----- Compiler config ----- 
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -20,86 +42,46 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 endif()
 
 if(MSVC)
-  add_compile_options(/MP)
+  string(APPEND CMAKE_CXX_FLAGS " /Zc:__cplusplus /MP")
 endif()
 
-if(NOT ICU_PATH)
-	set(ICU_PATH "${CMAKE_CURRENT_SOURCE_DIR}/icu")
-endif()
-
-# ----- Version -----
-
-# Read the content of uvernum.h file
-file(STRINGS "${ICU_PATH}/icu4c/source/common/unicode/uvernum.h" UVERNUM_H_CONTENT)
-
-# Match U_ICU_VERSION_MAJOR_NUM macro
-string(REGEX MATCH "U_ICU_VERSION_MAJOR_NUM ([0-9]+)" major_match ${UVERNUM_H_CONTENT})
-if (major_match)
-  set(LIBICU_VERSION_MAJOR ${CMAKE_MATCH_1})
-endif()
-
-# Match U_ICU_VERSION_MINOR_NUM macro
-string(REGEX MATCH "U_ICU_VERSION_MINOR_NUM ([0-9]+)" minor_match ${UVERNUM_H_CONTENT})
-if (minor_match)
-  set(LIBICU_VERSION_MINOR ${CMAKE_MATCH_1})
-endif()
-
-# Match U_ICU_VERSION_PATCHLEVEL_NUM macro
-string(REGEX MATCH "U_ICU_VERSION_PATCHLEVEL_NUM ([0-9]+)" patch_match ${UVERNUM_H_CONTENT})
-if (patch_match)
-  set(LIBICU_VERSION_PATCH ${CMAKE_MATCH_1})
-endif()
-
-set(LIBICU_VERSION ${LIBICU_VERSION_MAJOR}.${LIBICU_VERSION_MINOR}.${LIBICU_VERSION_PATCH})
-message("icu version: ${LIBICU_VERSION}")
 
 # ----- Setting -----
 
 option(ICU_BUILD_UC "Build icu::uc" ON)
 option(ICU_BUILD_I18N "Build icu::i18n" ON)
 option(ICU_BUILD_IO "Build icu::io" ON)
+option(ICU_BUILD_SHARED "Build shared library" OFF)
+option(ICU_BUILD_DEBUG_INFO "Open debug info" OFF)
+option(ICU_INSTALL "Generate the install target" ${ICU_MASTER_PROJECT})
 
-option(ICU_STATIC "Build static lib" OFF)
-option(ICU_BUILD_DEBUG "Open debug info" OFF)
 
 # ----- Install setting -----
 
 option(ICU_NO_INSTALL "Using libicu without installation" OFF)
 
 if(NOT CMAKE_INSTALL_BINDIR)
-  set(CMAKE_INSTALL_BINDIR ${CMAKE_INSTALL_PREFIX}/bin)
+  set(CMAKE_INSTALL_BINDIR "${CMAKE_INSTALL_PREFIX}/bin")
 endif()
 
 if(NOT CMAKE_INSTALL_LIBDIR)
-  set(CMAKE_INSTALL_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib)
+  set(CMAKE_INSTALL_LIBDIR "${CMAKE_INSTALL_PREFIX}/lib")
 endif()
 
 if(NOT CMAKE_INSTALL_INCLUDEDIR)
-  set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include/icu)
+  set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_PREFIX}/include/icu")
 endif()
 
 
 # ----- Info -----
 
-message("ICU source path: ${ICU_PATH}")
-message("Is build icu::uc: ${ICU_BUILD_UC}")
-message("Is build icu::i18n: ${ICU_BUILD_I18N}")
-message("Is build icu::io: ${ICU_BUILD_IO}")
-message("Is build icu static lib: ${ICU_STATIC}")
-message("Is Open debug info: ${ICU_BUILD_DEBUG}")
-message("Is using libicu without installation: ${ICU_NO_INSTALL}")
-
-
-function(append_prefix_to_file_list FILE_LIST_TXT FILE_LIST FILE_PREFIX)
-  # Read the contents of the input file to the file list
-  file(STRINGS ${FILE_LIST_TXT} FILE_LIST_CONTENT)
-  
-  # Add a prefix to each file path
-  list(TRANSFORM FILE_LIST_CONTENT PREPEND ${FILE_PREFIX})
-  
-  # Assign the list of processed files to external variables
-  set(${FILE_LIST} ${FILE_LIST_CONTENT} PARENT_SCOPE)
-endfunction()
+message(STATUS "ICU source path: ${ICU_PATH}")
+message(STATUS "Is build icu::uc: ${ICU_BUILD_UC}")
+message(STATUS "Is build icu::i18n: ${ICU_BUILD_I18N}")
+message(STATUS "Is build icu::io: ${ICU_BUILD_IO}")
+message(STATUS "Is build icu shared library: ${ICU_BUILD_SHARED}")
+message(STATUS "Is open debug info: ${ICU_BUILD_DEBUG_INFO}")
+message(STATUS "Is generate the install target: ${ICU_INSTALL}")
 
 
 # ----- Find source file -----
@@ -107,7 +89,7 @@ endfunction()
 set(STUBDATA_SRC "icu/icu4c/source/stubdata/stubdata.cpp")
 if(ICU_BUILD_UC)
   append_prefix_to_file_list("${ICU_PATH}/icu4c/source/common/sources.txt" UC_SOURCE_FILE_LIST "${ICU_PATH}/icu4c/source/common/")
-  if(ICU_BUILD_DEBUG)
+  if(ICU_BUILD_DEBUG_INFO)
     foreach(file ${UC_SOURCE_FILE_LIST})
       message("icu::uc source file: ${file}")
     endforeach()
@@ -115,7 +97,7 @@ if(ICU_BUILD_UC)
 endif()
 if(ICU_BUILD_I18N)
   append_prefix_to_file_list("${ICU_PATH}/icu4c/source/i18n/sources.txt" I18N_SOURCE_FILE_LIST "${ICU_PATH}/icu4c/source/i18n/")
-  if(ICU_BUILD_DEBUG)
+  if(ICU_BUILD_DEBUG_INFO)
     foreach(file ${I18N_SOURCE_FILE_LIST})
       message("icu::i18n source file: ${file}")
     endforeach()
@@ -123,7 +105,7 @@ if(ICU_BUILD_I18N)
 endif()
 if(ICU_BUILD_IO)
   append_prefix_to_file_list("${ICU_PATH}/icu4c/source/io/sources.txt" IO_SOURCE_FILE_LIST "${ICU_PATH}/icu4c/source/io/")
-  if(ICU_BUILD_DEBUG)
+  if(ICU_BUILD_DEBUG_INFO)
     foreach(file ${IO_SOURCE_FILE_LIST})
       message("icu::io source file: ${file}")
     endforeach()
@@ -133,9 +115,11 @@ endif()
 
 # ----- Build -----
 
-if (NOT ICU_STATIC)
-
+if (ICU_BUILD_SHARED)
+  set(BUILD_SHARED_LIBS True)
 endif()
+
+add_library(icu INTERFACE)
 
 # add library
 if(ICU_BUILD_UC)
@@ -145,8 +129,8 @@ if(ICU_BUILD_UC)
     uc 
     PROPERTIES  
     PREFIX "libicu_"
-    VERSION ${PROJECT_VERSION} 
-    SOVERSION ${PROJECT_VERSION}
+    VERSION ${ICU_VERSION} 
+    SOVERSION ${ICU_VERSION_MAJOR}.${ICU_VERSION_MINOR}
     DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}")
   target_compile_definitions(uc PRIVATE U_COMMON_IMPLEMENTATION)
 endif()
@@ -157,8 +141,8 @@ if(ICU_BUILD_I18N)
     i18n 
     PROPERTIES  
     PREFIX "libicu_"
-    VERSION ${PROJECT_VERSION} 
-    SOVERSION ${PROJECT_VERSION}
+    VERSION ${ICU_VERSION} 
+    SOVERSION ${ICU_VERSION_MAJOR}.${ICU_VERSION_MINOR}
     DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}")
   target_compile_definitions(i18n PRIVATE U_I18N_IMPLEMENTATION)
 endif()
@@ -169,14 +153,14 @@ if(ICU_BUILD_IO)
     io 
     PROPERTIES 
     PREFIX "libicu_"
-    VERSION ${PROJECT_VERSION} 
-    SOVERSION ${PROJECT_VERSION}
+    VERSION ${ICU_VERSION} 
+    SOVERSION ${ICU_VERSION_MAJOR}.${ICU_VERSION_MINOR}
     DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}")
   target_compile_definitions(io PRIVATE U_IO_IMPLEMENTATION)
 endif()
 
 # set target properties
-if (ICU_STATIC)
+if (NOT BUILD_SHARED_LIBS)
   if(ICU_BUILD_UC)
     target_compile_definitions(uc PRIVATE U_STATIC_IMPLEMENTATION)
     set_target_properties(
@@ -228,20 +212,6 @@ if (ICU_STATIC)
       )
     endif()
   endif()
-else()
-  set(BUILD_SHARED_LIBS ON)
-  if(MSVC)
-  	set(DLL_VARIABLE "__declspec (dllimport)")
-  endif()
-  if(ICU_BUILD_UC)
-    target_compile_definitions(uc PRIVATE BUILDING_DLL)
-  endif()
-  if(ICU_BUILD_I18N)
-    target_compile_definitions(i18n PRIVATE BUILDING_DLL)
-  endif()
-  if(ICU_BUILD_IO)
-    target_compile_definitions(io PRIVATE BUILDING_DLL)
-  endif()
 endif()  
 
 
@@ -281,114 +251,96 @@ if(ICU_BUILD_IO)
   endforeach()
 endif()
 
-if(ICU_NO_INSTALL)
-  set(ICU_INCLUDEDIR "${CMAKE_CURRENT_BINARY_DIR}/include" PARENT_SCOPE)
-else()
-  set(ICU_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}")
-
-  if(ICU_BUILD_UC)
-    set_target_properties(uc PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${ICU_INCLUDEDIR})
-  endif()
-  if(ICU_BUILD_I18N)
-    set_target_properties(i18n PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${ICU_INCLUDEDIR})
-  endif()
-  if(ICU_BUILD_IO)
-    set_target_properties(io PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${ICU_INCLUDEDIR})
-  endif()  
+if(ICU_BUILD_UC)
+  target_include_directories(uc PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include")
+  target_include_directories(uc PUBLIC "$<BUILD_INTERFACE:${ICU_PATH}/icu4c/source/common>"
+                                       "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+endif()
+if(ICU_BUILD_I18N)
+  target_include_directories(i18n PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include")
+  target_include_directories(i18n PUBLIC "$<BUILD_INTERFACE:${ICU_PATH}/icu4c/source/i18n>"
+                                       "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+endif()
+if(ICU_BUILD_IO)
+  target_include_directories(io PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include")
+  target_include_directories(io PUBLIC "$<BUILD_INTERFACE:${ICU_PATH}/icu4c/source/io>"
+                                       "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 endif()
 
 
 # ----- Link -----
 
-if(ICU_BUILD_UC)
-  target_include_directories(uc PRIVATE "${ICU_PATH}/icu4c/source/common")
-endif()
 if(ICU_BUILD_I18N)
   add_dependencies(i18n uc)
-
-  target_include_directories(i18n PRIVATE "${ICU_PATH}/icu4c/source/common")
-  target_include_directories(i18n PRIVATE "${ICU_PATH}/icu4c/source/i18n")
-
-  target_link_libraries(i18n PRIVATE uc)
+  target_link_libraries(i18n uc)
 endif()
 if(ICU_BUILD_IO)
   add_dependencies(io uc i18n)
-
-  target_include_directories(io PRIVATE "${ICU_PATH}/icu4c/source/common")
-  target_include_directories(io PRIVATE "${ICU_PATH}/icu4c/source/i18n")
-  target_include_directories(io PRIVATE "${ICU_PATH}/icu4c/source/io")
-
-  target_link_libraries(io PRIVATE uc PRIVATE i18n)
+  target_link_libraries(io uc i18n)
 endif()
 
 
 # ----- Install -----
 
-# Determine whether to build modules based on conditions
+if(ICU_INSTALL)
 
-# Installation target
-if(ICU_BUILD_UC)
-  install(
-    TARGETS uc
-    EXPORT ICUTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  )
+  message(STATUS "Generating install")
+  set(project_config_in "${CMAKE_CURRENT_LIST_DIR}/cmake/ICUConfig.cmake.in")
+  set(project_config_out "${CMAKE_CURRENT_BINARY_DIR}/ICUConfig.cmake")
+  set(version_config_file "${CMAKE_CURRENT_BINARY_DIR}/ICUConfigVersion.cmake")
+  set(config_targets_file "ICUConfigTargets.cmake")
+  set(export_dest_dir "${CMAKE_INSTALL_LIBDIR}/cmake/icu")
+
+  # Install include files
+  install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/unicode" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+  # Install target
+  if(ICU_BUILD_UC)
+    install(
+      TARGETS uc
+      EXPORT ICU
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+  endif()
+  
+  if(ICU_BUILD_I18N)
+    install(
+      TARGETS i18n
+      EXPORT ICU
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+  endif()
+  
+  if(ICU_BUILD_IO)
+    install(
+      TARGETS io
+      EXPORT ICU
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+  endif()
+  
+  #Export target
+  export(EXPORT ICU NAMESPACE icu:: FILE "${config_targets_file}")
+
+  #Install ICUTargets.cmake
+  install(EXPORT ICU DESTINATION "${export_dest_dir}" NAMESPACE icu:: FILE "${config_targets_file}")
+  
+  #Install CMake config files
+  include(CMakePackageConfigHelpers)
+
+  configure_package_config_file("${project_config_in}" "${project_config_out}" INSTALL_DESTINATION "${config_targets_file}")
+  write_basic_package_version_file("${version_config_file}" COMPATIBILITY SameMajorVersion)
+
+  #Install ICU-config.cmake
+  install(FILES "${project_config_out}" "${version_config_file}" DESTINATION "${export_dest_dir}")
+
 endif()
-
-if(ICU_BUILD_I18N)
-  install(
-    TARGETS i18n
-    EXPORT ICUTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  )
-endif()
-
-if(ICU_BUILD_IO)
-  install(
-    TARGETS io
-    EXPORT ICUTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  )
-endif()
-
-# Installation header file
-install(
-  DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/unicode"
-  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-)
-
-#Export target
-export(
-  EXPORT ICUTargets
-  NAMESPACE icu::
-  FILE "${CMAKE_CURRENT_BINARY_DIR}/ICUTargets.cmake"
-)
-#Install ICUTargets.cmake
-install(
-  EXPORT ICUTargets
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake"
-  NAMESPACE icu::
-  FILE "ICUTargets.cmake"
-)
-
-#Export ICU-config.cmake
-include(CMakePackageConfigHelpers)
-configure_package_config_file(
-  "${CMAKE_CURRENT_SOURCE_DIR}/ICU-config.cmake.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/ICU-config.cmake"
-  INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake"
-)
-#Install ICU-config.cmake
-install(
-  FILES "${CMAKE_CURRENT_BINARY_DIR}/ICU-config.cmake"
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake"
-)
