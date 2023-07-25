@@ -284,7 +284,7 @@ endif()
 
 if(ICU_INSTALL)
 
-  message(STATUS "Generating install")
+  message(STATUS "icu generating install")
   set(project_config_in "${CMAKE_CURRENT_LIST_DIR}/cmake/ICUConfig.cmake.in")
   set(project_config_out "${CMAKE_CURRENT_BINARY_DIR}/ICUConfig.cmake")
   set(version_config_file "${CMAKE_CURRENT_BINARY_DIR}/ICUConfigVersion.cmake")
